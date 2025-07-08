@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # Sample ZIP-to-data mapping (you can expand this with real data)
 zip_data = {
@@ -106,17 +107,62 @@ def calculate_muse_score(agi, zip_code):
     else:
         tier = "🔴 Financial Stress"
 
-    return muse_score, tier
+    return muse_score, tier, {
+        "COLI Score": coli_score,
+        "Tax Score": tax_score,
+        "AGI Score": agi_score,
+        "Housing Score": housing_score,
+        "Deduction Score": deduction_score,
+        "Refund Score": refund_score,
+        "Liquidity Score": liquidity_score,
+        "Boost Score": delta_score
+    }
 
-# Streamlit UI
-st.title("Muse Score Calculator 💸")
-agi = st.number_input("Adjusted Gross Income (AGI)", min_value=10000, max_value=200000, step=1000)
-zip_code = st.text_input("ZIP Code", max_chars=5)
+# Streamlit Custom CSS
+st.markdown(
+    """
+    <style>
+    .main { background-color: #f0f2f6; }
+    .block-container { padding: 2rem 2rem 2rem 2rem; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
+# Title & Subtitle
+st.markdown("<h1 style='text-align: center;'>💸 Muse Score Calculator</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Estimate your financial health based on location and income</p>", unsafe_allow_html=True)
+st.divider()
+
+# Layout Inputs
+col1, col2 = st.columns(2)
+with col1:
+    agi = st.number_input("Adjusted Gross Income (AGI)", min_value=10000, max_value=200000, step=1000)
+with col2:
+    zip_code = st.text_input("ZIP Code", max_chars=5)
+
+# Compute
 if st.button("Calculate Muse Score"):
-    score, tier = calculate_muse_score(agi, zip_code)
+    score, tier, components = calculate_muse_score(agi, zip_code)
     if score:
-        st.markdown(f"### 🧠 Muse Score: {score}")
-        st.markdown(f"### 📊 Tier: {tier}")
+        st.success("🎯 Muse Score Computed!")
+
+        # Display Metrics
+        col1, col2 = st.columns(2)
+        col1.metric("Muse Score", score)
+        col2.metric("Tier", tier)
+
+        # Visualization (Score Bar)
+        fig, ax = plt.subplots(figsize=(6, 1))
+        ax.barh([0], [score], color='green' if score >= 650 else 'orange')
+        ax.set_xlim(350, 850)
+        ax.set_yticks([])
+        ax.set_title("Your Muse Score")
+        st.pyplot(fig)
+
+        # Score Components
+        with st.expander("🔍 Show Scoring Details"):
+            for k, v in components.items():
+                st.write(f"{k}: {v:.2f}")
     else:
         st.error(tier)
